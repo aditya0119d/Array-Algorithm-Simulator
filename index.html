@@ -8,7 +8,7 @@
 
     <meta
         name="description"
-        content="Interactive visualization of array address calculation, insertion, deletion, linear search and binary search."
+        content="Interactive visualization of array operations, searching and seven sorting algorithms."
     >
 
     <link rel="stylesheet" href="style.css">
@@ -115,6 +115,11 @@
             <button class="operation-tab" data-operation="binary">
                 <span>05</span>
                 Binary Search
+            </button>
+
+            <button class="operation-tab" data-operation="sorting">
+                <span>06</span>
+                Sorting Lab
             </button>
 
         </section>
@@ -322,6 +327,19 @@
                         <span>Binary Search</span>
                         <strong>O(log n)</strong>
                     </div>
+                    <div class="complexity-row">
+                        <span>Selection / Bubble / Insertion</span>
+                        <strong>O(n²)</strong>
+                    </div>
+                    <div class="complexity-row">
+                        <span>Quick / Merge</span>
+                        <strong>O(n log n)*</strong>
+                    </div>
+                    <div class="complexity-row">
+                        <span>Shell / Radix</span>
+                        <strong>Gap / d(n+b)</strong>
+                    </div>
+                    <p class="complexity-footnote">*Quick Sort worst case: O(n²). Shell depends on its gap sequence.</p>
 
                 </div>
 
@@ -340,7 +358,7 @@
         <p>
             Array Algorithm Simulator
             <span>•</span>
-            College DSA Assignment
+            College DSA Assignment • Searching & Sorting
         </p>
 
         <p>

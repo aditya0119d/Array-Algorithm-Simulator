@@ -97,6 +97,17 @@ const operationData = {
 
         formula:
             "Worst Case: O(log₂ n)"
+    },
+
+    sorting: {
+        eyebrow: "OPERATION 06",
+        title: "Sorting Algorithms",
+        description:
+            "Compare seven sorting algorithms and watch each comparison, movement and pass step by step.",
+        complexity: "Varies by algorithm",
+        explanation:
+            "Sorting arranges values in ascending order. Choose an algorithm to inspect its strategy, comparisons, swaps and final result.",
+        formula: "Selection • Bubble • Insertion • Quick • Merge • Shell • Radix"
     }
 
 };
@@ -671,9 +682,53 @@ function renderOperationForm() {
         `;
 
         updateBinaryArrayStatus();
-
+        return;
     }
 
+    if (currentOperation === "sorting") {
+        operationPanel.innerHTML = `
+            <div class="operation-form sorting-form">
+                <div class="input-group">
+                    <label for="sortingAlgorithm">Select sorting algorithm</label>
+                    <select id="sortingAlgorithm">
+                        <option value="selection">Selection Sort</option>
+                        <option value="bubble">Bubble Sort</option>
+                        <option value="insertion">Insertion Sort</option>
+                        <option value="quick">Quick Sort</option>
+                        <option value="merge">Merge Sort</option>
+                        <option value="shell">Shell Sort</option>
+                        <option value="radix">Radix Sort (signed integers)</option>
+                    </select>
+                </div>
+                <div class="sorting-meta" id="sortingMeta">
+                    In-place • O(n²) time • O(1) extra space
+                </div>
+            </div>
+            <div class="info-note">Sorting runs on a copy first. The original array is updated only when the animation completes. Radix Sort accepts integers only, including negative values.</div>
+        `;
+        document.getElementById("sortingAlgorithm").addEventListener("change", updateSortingMeta);
+        updateSortingMeta();
+        return;
+    }
+
+}
+
+
+/** Updates the complexity note for the selected sorting algorithm. */
+function updateSortingMeta() {
+    const select = document.getElementById("sortingAlgorithm");
+    const target = document.getElementById("sortingMeta");
+    if (!select || !target) return;
+    const notes = {
+        selection: "In-place • O(n²) time • O(1) extra space • Not stable",
+        bubble: "Best O(n) • Average/Worst O(n²) • O(1) space • Stable",
+        insertion: "Best O(n) • Average/Worst O(n²) • O(1) space • Stable",
+        quick: "Average O(n log n), worst O(n²) • Average O(log n) stack • Usually not stable",
+        merge: "O(n log n) time • O(n) extra space • Stable",
+        shell: "Depends on gap sequence • This simulator uses halving gaps • O(1) extra space",
+        radix: "O(d(n + b)) time • O(n + b) extra space • Stable digit passes"
+    };
+    target.textContent = notes[select.value];
 }
 
 
@@ -727,7 +782,16 @@ function updateBinaryArrayStatus() {
  */
 function sortArray() {
 
-    array.sort((a, b) => a - b);
+    // Manual insertion sort: avoid relying on Array.prototype.sort.
+    for (let i = 1; i < array.length; i++) {
+        const key = array[i];
+        let j = i - 1;
+        while (j >= 0 && array[j] > key) {
+            array[j + 1] = array[j];
+            j--;
+        }
+        array[j + 1] = key;
+    }
 
     arrayInput.value =
         array.join(",");
@@ -974,6 +1038,9 @@ function createSteps() {
 
         case "binary":
             return createBinarySearchSteps();
+
+        case "sorting":
+            return createSortingSteps();
 
         default:
             return [];
@@ -1585,6 +1652,211 @@ function createBinarySearchSteps() {
 
 
 /* =========================================================
+   SORTING ALGORITHMS (MANUAL IMPLEMENTATIONS)
+========================================================= */
+
+const SORT_INFO = {
+    selection: { name: "Selection Sort", best: "O(n²)", average: "O(n²)", worst: "O(n²)", space: "O(1)" },
+    bubble: { name: "Bubble Sort", best: "O(n)", average: "O(n²)", worst: "O(n²)", space: "O(1)" },
+    insertion: { name: "Insertion Sort", best: "O(n)", average: "O(n²)", worst: "O(n²)", space: "O(1)" },
+    quick: { name: "Quick Sort", best: "O(n log n)", average: "O(n log n)", worst: "O(n²)", space: "O(log n) average" },
+    merge: { name: "Merge Sort", best: "O(n log n)", average: "O(n log n)", worst: "O(n log n)", space: "O(n)" },
+    shell: { name: "Shell Sort", best: "Depends on gaps", average: "Depends on gaps", worst: "O(n²) for halving gaps", space: "O(1)" },
+    radix: { name: "Radix Sort", best: "O(d(n + b))", average: "O(d(n + b))", worst: "O(d(n + b))", space: "O(n + b)" }
+};
+
+function createSortingSteps() {
+    const algorithm = document.getElementById("sortingAlgorithm")?.value || "selection";
+    if (algorithm === "radix" && !array.every(Number.isSafeInteger)) {
+        showResult("Safe integers required", "Radix Sort supports safe integer values only. Use whole numbers within JavaScript's safe integer range.");
+        setStatus("error", "Invalid input");
+        return [];
+    }
+    const work = [...array];
+    const generated = [];
+    let comparisons = 0;
+    let moves = 0;
+    const info = SORT_INFO[algorithm];
+    const record = (message, active = [], sorted = [], extra = {}) => {
+        generated.push({
+            type: "sorting", algorithm, algorithmName: info.name,
+            displayArray: [...work], active: [...active], sorted: [...sorted],
+            comparisons, moves, log: message, ...extra
+        });
+    };
+    const swap = (a, b) => {
+        if (a === b) return;
+        const temp = work[a]; work[a] = work[b]; work[b] = temp;
+        moves++;
+    };
+
+    if (algorithm === "selection") {
+        for (let i = 0; i < work.length - 1; i++) {
+            let min = i;
+            for (let j = i + 1; j < work.length; j++) {
+                comparisons++;
+                record(`Compare ${work[j]} with current minimum ${work[min]}.`, [min, j], Array.from({length:i},(_,k)=>k));
+                if (work[j] < work[min]) min = j;
+            }
+            if (min !== i) { record(`Swap ${work[i]} and ${work[min]}.`, [i, min], Array.from({length:i},(_,k)=>k)); swap(i, min); record(`Placed ${work[i]} at its correct position.`, [i], Array.from({length:i+1},(_,k)=>k)); }
+            else record(`${work[i]} is already the minimum for this pass.`, [i], Array.from({length:i+1},(_,k)=>k));
+        }
+        record("Selection Sort finished.", [], work.map((_,i)=>i));
+    }
+
+    if (algorithm === "bubble") {
+        for (let end = work.length - 1; end > 0; end--) {
+            let changed = false;
+            for (let j = 0; j < end; j++) {
+                comparisons++;
+                record(`Compare adjacent values ${work[j]} and ${work[j+1]}.`, [j,j+1], work.map((_,i)=>i>end?i:-1).filter(i=>i>=0));
+                if (work[j] > work[j+1]) { swap(j,j+1); changed = true; record(`Swap them because they are out of order.`, [j,j+1]); }
+            }
+            record(`${work[end]} is now fixed at index ${end}.`, [end], work.map((_,i)=>i>=end?i:-1).filter(i=>i>=0));
+            if (!changed) break;
+        }
+        record("Bubble Sort finished.", [], work.map((_,i)=>i));
+    }
+
+    if (algorithm === "insertion") {
+        for (let i = 1; i < work.length; i++) {
+            const key = work[i]; let j = i - 1;
+            record(`Take ${key} as the key and inspect the sorted left portion.`, [i], Array.from({length:i},(_,k)=>k));
+            while (j >= 0) {
+                comparisons++;
+                record(`Compare key ${key} with ${work[j]}.`, [j,i], Array.from({length:i},(_,k)=>k));
+                if (work[j] > key) { work[j+1] = work[j]; moves++; record(`Shift ${work[j]} one position to the right.`, [j,j+1]); j--; }
+                else break;
+            }
+            work[j+1] = key; moves++;
+            record(`Insert key ${key} at index ${j+1}.`, [j+1], Array.from({length:i+1},(_,k)=>k));
+        }
+        record("Insertion Sort finished.", [], work.map((_,i)=>i));
+    }
+
+    if (algorithm === "quick") {
+        const partition = (low, high) => {
+            const pivot = work[high]; let i = low - 1;
+            record(`Choose ${pivot} at index ${high} as pivot.`, [high]);
+            for (let j = low; j < high; j++) {
+                comparisons++;
+                record(`Compare ${work[j]} with pivot ${pivot}.`, [j,high]);
+                if (work[j] <= pivot) { i++; if (i !== j) { swap(i,j); record(`Move ${work[i]} to the left partition.`, [i,j]); } }
+            }
+            swap(i+1,high);
+            record(`Place pivot ${pivot} at its final index ${i+1}.`, [i+1]);
+            return i+1;
+        };
+        const quickSort = (low, high) => {
+            if (low < high) { const pi = partition(low,high); quickSort(low,pi-1); quickSort(pi+1,high); }
+        };
+        quickSort(0,work.length-1);
+        record("Quick Sort finished.", [], work.map((_,i)=>i));
+    }
+
+    if (algorithm === "merge") {
+        const mergeSort = (left,right) => {
+            if (left >= right) return;
+            const mid = Math.floor((left+right)/2);
+            record(`Divide range ${left}–${right} at midpoint ${mid}.`, [mid]);
+            mergeSort(left,mid); mergeSort(mid+1,right);
+            const L = [], R = [];
+            for (let x=left;x<=mid;x++) L.push(work[x]);
+            for (let x=mid+1;x<=right;x++) R.push(work[x]);
+            let i=0,j=0,k=left;
+            while(i<L.length && j<R.length) {
+                comparisons++;
+                record(`Merge: compare ${L[i]} and ${R[j]}.`, [k]);
+                if(L[i] <= R[j]) work[k++] = L[i++]; else work[k++] = R[j++];
+                moves++; record(`Write the next smallest value into index ${k-1}.`, [k-1]);
+            }
+            while(i<L.length) { work[k++]=L[i++]; moves++; record(`Copy remaining left value to index ${k-1}.`,[k-1]); }
+            while(j<R.length) { work[k++]=R[j++]; moves++; record(`Copy remaining right value to index ${k-1}.`,[k-1]); }
+            record(`Range ${left}–${right} is merged.`, Array.from({length:right-left+1},(_,x)=>left+x));
+        };
+        mergeSort(0,work.length-1);
+        record("Merge Sort finished.", [], work.map((_,i)=>i));
+    }
+
+    if (algorithm === "shell") {
+        for (let gap = Math.floor(work.length/2); gap > 0; gap = Math.floor(gap/2)) {
+            record(`Start a Shell Sort pass with gap ${gap}.`);
+            for (let i=gap;i<work.length;i++) {
+                const temp=work[i]; let j=i;
+                while(j>=gap) {
+                    comparisons++;
+                    record(`Compare ${temp} with ${work[j-gap]} at gap ${gap}.`,[j-gap,j]);
+                    if(work[j-gap] > temp) { work[j]=work[j-gap]; moves++; record(`Shift ${work[j]} forward by gap ${gap}.`,[j-gap,j]); j-=gap; }
+                    else break;
+                }
+                work[j]=temp; moves++; record(`Place ${temp} at index ${j}.`,[j]);
+            }
+        }
+        record("Shell Sort finished.", [], work.map((_,i)=>i));
+    }
+
+    if (algorithm === "radix") {
+        const min = work.length ? Math.min(...work) : 0;
+        const items = work.map(value => ({ value, key: value - min }));
+        if (items.some(item => !Number.isSafeInteger(item.key))) {
+            showResult("Value range too large", "The difference between the smallest and largest values is too large for this Radix Sort implementation.");
+            setStatus("error", "Invalid range");
+            return [];
+        }
+        let max = 0; for (const item of items) if (item.key > max) max = item.key;
+        for (let exp=1; Math.floor(max/exp)>0; exp*=10) {
+            const count = Array(10).fill(0);
+            for (const item of items) count[Math.floor(item.key/exp)%10]++;
+            for (let i=1;i<10;i++) count[i]+=count[i-1];
+            const output = Array(items.length);
+            for (let i=items.length-1;i>=0;i--) {
+                const digit=Math.floor(items[i].key/exp)%10;
+                output[--count[digit]]=items[i];
+                moves++;
+                record(`Stable placement by digit ${digit} (place ${exp}).`, [i]);
+            }
+            for(let i=0;i<items.length;i++) items[i]=output[i];
+            for(let i=0;i<work.length;i++) work[i]=items[i].value;
+            record(`Completed the ${exp}s digit pass.`, work.map((_,i)=>i));
+        }
+        if (items.length && max === 0) record("All values are equal; no digit pass is needed.", [], work.map((_,i)=>i));
+        record("Radix Sort finished. Offset keys preserve the order of negative and positive integers.", [], work.map((_,i)=>i));
+    }
+
+    if (!generated.length) record("Array is already sorted or contains one element.", [], work.map((_,i)=>i));
+    const finalArray = [...work];
+    generated.push({
+        type: "sorting", algorithm, algorithmName: info.name,
+        displayArray: finalArray, active: [], sorted: finalArray.map((_,i)=>i),
+        comparisons, moves, log: `${info.name} completed.`, final: true,
+        newArray: finalArray, algorithmName: info.name
+    });
+    return generated;
+}
+
+function renderSortVisualization(step) {
+    const values = step.displayArray || array;
+    const maxAbs = Math.max(1, ...values.map(value => Math.abs(value)));
+    const sortedSet = new Set(step.sorted || []);
+    const activeSet = new Set(step.active || []);
+    const bars = values.map((value,index) => {
+        const height = Math.max(12, Math.round(Math.abs(value) / maxAbs * 130));
+        const classes = [activeSet.has(index) ? "active" : "", sortedSet.has(index) ? "sorted" : ""].filter(Boolean).join(" ");
+        return `<div class="sort-column ${classes}"><div class="sort-value">${escapeHTML(String(value))}</div><div class="sort-bar" style="height:${height}px"></div><span class="sort-index">${index}</span></div>`;
+    }).join("");
+    const info = SORT_INFO[step.algorithm];
+    visualizationArea.innerHTML = `
+        <div class="sort-visualization">
+            <div class="sort-heading"><strong>${info.name}</strong><span>${step.comparisons} comparisons · ${step.moves} movements</span></div>
+            <div class="sort-legend"><span><i class="legend-active"></i> Comparing / moving</span><span><i class="legend-sorted"></i> Sorted region</span></div>
+            <div class="sort-bars">${bars}</div>
+            <div class="sort-current">${escapeHTML(step.log)}</div>
+            <div class="sort-complexity"><span>Best <b>${info.best}</b></span><span>Average <b>${info.average}</b></span><span>Worst <b>${info.worst}</b></span><span>Space <b>${info.space}</b></span></div>
+        </div>`;
+}
+
+
+/* =========================================================
    STEP APPLICATION
 ========================================================= */
 
@@ -1678,6 +1950,10 @@ function applyStep(step) {
 
     }
 
+
+    if (step.type === "sorting") {
+        renderSortVisualization(step);
+    }
 
     if (step.final) {
 
@@ -2169,6 +2445,14 @@ function showFinalResult() {
         return;
     }
 
+
+    if (currentOperation === "sorting") {
+        showResult(
+            `${lastStep.algorithmName} completed`,
+            `Sorted ${lastStep.newArray.length} elements in ascending order using ${lastStep.comparisons} comparisons and ${lastStep.moves} movements. Result: ${lastStep.newArray.join(", ")}.`
+        );
+        return;
+    }
 
     if (
         currentOperation === "linear" ||
