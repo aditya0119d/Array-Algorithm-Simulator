@@ -205,6 +205,41 @@ function initialize() {
 
     setupEventListeners();
 
+    setupDinoMascot();
+
+}
+
+
+/**
+ * Adds a playful reaction when the dinosaur mascot is clicked.
+ */
+function setupDinoMascot() {
+
+    const mascot = document.getElementById("dinoMascot");
+
+    if (!mascot) {
+        return;
+    }
+
+    mascot.addEventListener("click", () => {
+
+        mascot.classList.remove("mascot-patted");
+        void mascot.offsetWidth;
+        mascot.classList.add("mascot-patted");
+
+        for (let index = 0; index < 5; index++) {
+            const heart = document.createElement("span");
+            heart.className = "dino-heart";
+            heart.textContent = index % 2 === 0 ? "♥" : "✦";
+            heart.style.setProperty("--heart-x", `${(index - 2) * 14}px`);
+            heart.style.setProperty("--heart-delay", `${index * 55}ms`);
+            mascot.appendChild(heart);
+
+            setTimeout(() => heart.remove(), 900);
+        }
+
+    });
+
 }
 
 
