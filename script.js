@@ -975,7 +975,7 @@ function resetOperation() {
 
     visualizationArea.innerHTML = `
         <div class="empty-visualization">
-            <div class="empty-icon">▶</div>
+            <div class="empty-icon" aria-hidden="true">🥚</div>
 
             <h3>Ready to visualize</h3>
 
